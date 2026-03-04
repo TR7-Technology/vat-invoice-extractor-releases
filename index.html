@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VAT Invoice Extractor — TR7 Technology</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Tokens ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #07090f;
+      --bg-card:    #0d1017;
+      --bg-line:    #131720;
+      --border:     #1c2335;
+      --border-hi:  #2a3550;
+      --accent:     #3b7eff;
+      --accent-dim: rgba(59,126,255,.12);
+      --success:    #22c55e;
+      --warning:    #f59e0b;
+      --text:       #e8edf5;
+      --text-sec:   #7a8aaa;
+      --text-muted: #3d4d6a;
+      --mono:       'DM Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+      --display:    'Syne', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grid background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--bg-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg-line) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: .4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Glow orb ── */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 500px;
+      background: radial-gradient(ellipse, rgba(59,126,255,.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      background: rgba(7,9,15,.7);
+    }
+
+    nav .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-logo {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .nav-name {
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: .3px;
+    }
+
+    .nav-by {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(59,126,255,.25);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--accent);
+      letter-spacing: .5px;
+      margin-bottom: 28px;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.7); }
+    }
+
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.05;
+      margin-bottom: 20px;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, #fff 0%, #7aa8ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      color: var(--text-sec);
+      font-size: 16px;
+      max-width: 480px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-family: var(--display);
+      font-weight: 600;
+      font-size: 15px;
+      padding: 13px 28px;
+      border-radius: 10px;
+      transition: all .2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .hero-cta:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px rgba(59,126,255,.3);
+    }
+
+    .hero-cta.loading {
+      background: var(--border-hi);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* ── Stats bar ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 48px 0;
+    }
+
+    .stat {
+      background: var(--bg-card);
+      padding: 20px 24px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: var(--display);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -1px;
+    }
+
+    .stat-lbl {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      letter-spacing: .5px;
+      margin-top: 2px;
+    }
+
+    /* ── Section ── */
+    .section-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Release list ── */
+    #releases-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 80px;
+    }
+
+    .release-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: border-color .2s;
+      animation: fadeUp .4s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .release-card:hover { border-color: var(--border-hi); }
+
+    .release-card.latest {
+      border-color: rgba(59,126,255,.35);
+      background: linear-gradient(135deg, rgba(59,126,255,.04) 0%, var(--bg-card) 60%);
+    }
+
+    .release-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .release-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .version-tag {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -.3px;
+    }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    .badge-latest {
+      background: rgba(59,126,255,.15);
+      color: var(--accent);
+      border: 1px solid rgba(59,126,255,.3);
+    }
+
+    .badge-pre {
+      background: rgba(245,158,11,.1);
+      color: var(--warning);
+      border: 1px solid rgba(245,158,11,.25);
+    }
+
+    .release-date {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .release-body {
+      padding: 0 24px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .release-notes {
+      font-size: 13px;
+      color: var(--text-sec);
+      line-height: 1.65;
+      padding: 16px 0 20px;
+      white-space: pre-line;
+    }
+
+    .assets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .asset-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all .15s;
+    }
+
+    .asset-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .asset-btn .icon { font-size: 14px; }
+
+    .asset-size {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    /* ── Empty / Loading ── */
+    .state-msg {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 0;
+    }
+
+    footer .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-family: var(--mono);
+      transition: color .15s;
+    }
+
+    .footer-links a:hover { color: var(--text-sec); }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: 1fr; }
+      .release-header { flex-direction: column; align-items: flex-start; }
+      h1 { letter-spacing: -1px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="wrap">
+    <div class="nav-brand">
+      <div class="nav-logo">⬡</div>
+      <div>
+        <div class="nav-name">VAT Invoice Extractor</div>
+        <div class="nav-by">TR7 Technology Corporation</div>
+      </div>
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);">
+      Windows 10/11 · 64-bit
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-badge">PHẦN MỀM TRÍCH XUẤT HÓA ĐƠN VAT</div>
+    <h1>Trích xuất hóa đơn<br/><span>XML sang Excel</span></h1>
+    <p class="hero-desc">
+      Tự động hóa việc đọc và chuyển đổi hóa đơn VAT điện tử từ định dạng XML
+      sang Excel. Hỗ trợ MISA, Fast, VNPT, Viettel, FPT theo Thông tư 78/2021.
+    </p>
+    <a href="#" class="hero-cta loading" id="cta-download">
+      <span>⬇</span> Tải phiên bản mới nhất
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num" id="stat-versions">—</div>
+      <div class="stat-lbl">PHIÊN BẢN</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-latest">—</div>
+      <div class="stat-lbl">PHIÊN BẢN MỚI NHẤT</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-platform">Win</div>
+      <div class="stat-lbl">NỀN TẢNG</div>
+    </div>
+  </div>
+
+  <!-- Releases -->
+  <div class="section-title">Lịch sử phiên bản</div>
+  <div id="releases-container">
+    <div class="state-msg">Đang tải danh sách phiên bản...</div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="wrap">
+    <div class="footer-copy">© 2026 TR7 Technology Corporation · All rights reserved</div>
+    <div class="footer-links">
+      <a href="mailto:contact@tr7.vn">Liên hệ hỗ trợ</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ── Config — chỉnh 2 dòng này theo repo của bạn ──
+  const GITHUB_OWNER = 'TR7 Technology';
+  const GITHUB_REPO  = 'vat-invoice-extractor';
+
+  // ── Helpers ──
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString('vi-VN', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+  }
+
+  function formatSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function cleanNotes(body) {
+    if (!body) return '';
+    // Bỏ phần header cố định trong release body, chỉ lấy phần "Thay đổi"
+    const marker = 'Thay đổi trong phiên bản này';
+    const idx = body.indexOf(marker);
+    if (idx === -1) return body.trim();
+    return body.slice(idx + marker.length).replace(/^[\s_\n]+/, '').trim();
+  }
+
+  // ── Render một release card ──
+  function renderRelease(release, isLatest) {
+    const notes = cleanNotes(release.body);
+    const assets = release.assets.filter(a => a.name.endsWith('.exe'));
+
+    const card = document.createElement('div');
+    card.className = 'release-card' + (isLatest ? ' latest' : '');
+
+    card.innerHTML = `
+      <div class="release-header">
+        <div class="release-left">
+          <span class="version-tag">${release.tag_name}</span>
+          ${isLatest ? '<span class="badge badge-latest">LATEST</span>' : ''}
+          ${release.prerelease ? '<span class="badge badge-pre">PRE-RELEASE</span>' : ''}
+        </div>
+        <span class="release-date">${formatDate(release.published_at)}</span>
+      </div>
+      <div class="release-body">
+        ${notes ? `<div class="release-notes">${notes}</div>` : ''}
+        <div class="assets">
+          ${assets.length > 0
+            ? assets.map(a => `
+                <a class="asset-btn" href="${a.browser_download_url}" download>
+                  <span class="icon">⬇</span>
+                  <span>${a.name}</span>
+                  ${a.size ? `<span class="asset-size">${formatSize(a.size)}</span>` : ''}
+                </a>
+              `).join('')
+            : '<span style="font-size:12px;color:var(--text-muted);font-family:var(--mono);">Không có file đính kèm</span>'
+          }
+        </div>
+      </div>
+    `;
+
+    return card;
+  }
+
+  // ── Fetch releases từ GitHub API ──
+  async function loadReleases() {
+    const container = document.getElementById('releases-container');
+    const cta = document.getElementById('cta-download');
+
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases`,
+        { headers: { 'Accept': 'application/vnd.github+json' } }
+      );
+
+      if (!res.ok) throw new Error(`GitHub API: ${res.status}`);
+
+      const releases = await res.json();
+
+      if (!releases.length) {
+        container.innerHTML = '<div class="state-msg">Chưa có phiên bản nào được phát hành.</div>';
+        return;
+      }
+
+      // Update stats
+      const latest = releases.find(r => !r.prerelease) || releases[0];
+      document.getElementById('stat-versions').textContent = releases.length;
+      document.getElementById('stat-latest').textContent = latest.tag_name;
+
+      // Update CTA button
+      const latestExe = latest.assets.find(a => a.name.endsWith('.exe'));
+      if (latestExe) {
+        cta.href = latestExe.browser_download_url;
+        cta.classList.remove('loading');
+        cta.innerHTML = `<span>⬇</span> Tải ${latest.tag_name}`;
+      }
+
+      // Render cards
+      container.innerHTML = '';
+      releases.forEach((release, i) => {
+        const card = renderRelease(release, i === 0 && !release.prerelease);
+        card.style.animationDelay = `${i * 60}ms`;
+        container.appendChild(card);
+      });
+
+    } catch (err) {
+      container.innerHTML = `
+        <div class="state-msg">
+          Không thể tải danh sách phiên bản.<br/>
+          <span style="font-size:11px;opacity:.6;">${err.message}</span>
+        </div>
+      `;
+    }
+  }
+
+  loadReleases();
+</script>
+</body>
+</html>
