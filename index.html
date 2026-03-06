@@ -470,7 +470,8 @@
     <h1>Trích xuất hóa đơn<br/><span>XML sang Excel</span></h1>
     <p class="hero-desc">
       Tự động hóa việc đọc và chuyển đổi hóa đơn VAT điện tử từ định dạng XML
-      sang Excel. Hỗ trợ MISA, Fast, VNPT, Viettel, FPT theo Thông tư 78/2021.
+      sang Excel. Hỗ trợ đầy đủ mẫu số 1–6 theo NĐ 123/2020, NĐ 70/2025.
+      Tương thích MISA, Fast, VNPT, Viettel, FPT.
     </p>
     <a href="#" class="hero-cta loading" id="cta-download">
       <span>⬇</span> Tải phiên bản mới nhất
@@ -540,7 +541,7 @@
   // ── Render một release card ──
   function renderRelease(release, isLatest) {
     const notes = cleanNotes(release.body);
-    const assets = release.assets.filter(a => a.name.endsWith('.exe'));
+    const assets = release.assets.filter(a => a.name.endsWith('.zip'));
 
     const card = document.createElement('div');
     card.className = 'release-card' + (isLatest ? ' latest' : '');
@@ -560,7 +561,7 @@
           ${assets.length > 0
             ? assets.map(a => `
                 <a class="asset-btn" href="${a.browser_download_url}" download>
-                  <span class="icon">⬇</span>
+                  <span class="icon">📦</span>
                   <span>${a.name}</span>
                   ${a.size ? `<span class="asset-size">${formatSize(a.size)}</span>` : ''}
                 </a>
@@ -600,9 +601,9 @@
       document.getElementById('stat-latest').textContent = latest.tag_name;
 
       // Update CTA button
-      const latestExe = latest.assets.find(a => a.name.endsWith('.exe'));
-      if (latestExe) {
-        cta.href = latestExe.browser_download_url;
+      const latestZip = latest.assets.find(a => a.name.endsWith('.zip'));
+      if (latestZip) {
+        cta.href = latestZip.browser_download_url;
         cta.classList.remove('loading');
         cta.innerHTML = `<span>⬇</span> Tải ${latest.tag_name}`;
       }
